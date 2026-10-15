@@ -7,9 +7,9 @@
 ![Jupyter](https://img.shields.io/badge/Jupyter-reproducible-F37626?logo=jupyter&logoColor=white)
 ![Study period](https://img.shields.io/badge/study_period-2010%E2%80%932022-6F4E7C)
 
-![Coupling coordination maps for 2010 and 2022](outputs/maps/coupling_coordination_2010_2022.png)
+![City-level coupling coordination change from 2010 to 2022](outputs/charts/readme_hero.png)
 
-*Featured spatial evidence — original competition maps arranged as a 2010–2022 comparison. The public workflow does not regenerate their boundaries or classifications because the complete GIS inputs are not distributed.*
+*Featured result — each row links the same city's reported 2010 and 2022 values, making both the direction and magnitude of change directly comparable.*
 
 ## Project at a glance
 
@@ -105,9 +105,10 @@ python -m venv .venv
 # macOS/Linux: source .venv/bin/activate
 python -m pip install -r requirements.txt
 python scripts/run_analysis.py
-python scripts/make_map_comparison.py
 python -m pytest
 ```
+
+The original competition-map plate can optionally be rebuilt with `python scripts/make_map_comparison.py`. It is retained as source evidence rather than used as the homepage visual because the complete GIS inputs are unavailable.
 
 Execute the notebooks from the repository root:
 

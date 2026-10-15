@@ -7,7 +7,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.analysis import city_coupling_change, load_data, provincial_summary
-from src.visualization import make_portfolio_figure
+from src.visualization import make_portfolio_figure, make_readme_hero
 
 
 def main() -> None:
@@ -16,7 +16,7 @@ def main() -> None:
     data = load_data(data_path)
     summary = provincial_summary(data)
     changes = city_coupling_change(data)
-    outputs = make_portfolio_figure(data, output_dir)
+    outputs = (*make_readme_hero(data, output_dir), *make_portfolio_figure(data, output_dir))
 
     print(f"Validated {len(data)} records for {data['city'].nunique()} cities")
     print(summary.to_string(index=False))

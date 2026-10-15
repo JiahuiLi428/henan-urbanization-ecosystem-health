@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.lines import Line2D
 
 from src.analysis import city_coupling_change, provincial_summary
 
@@ -29,6 +30,8 @@ def configure_style() -> None:
             "font.family": "sans-serif",
             "font.sans-serif": ["Arial", "DejaVu Sans", "sans-serif"],
             "svg.fonttype": "none",
+            "svg.hashsalt": "henan-coupling-portfolio",
+            "pdf.fonttype": 42,
             "font.size": 10,
             "axes.titlesize": 13,
             "axes.titleweight": "bold",
@@ -38,6 +41,104 @@ def configure_style() -> None:
             "legend.frameon": False,
         }
     )
+
+
+def make_readme_hero(data: pd.DataFrame, output_dir: str | Path) -> tuple[Path, Path]:
+    """Create a direct 2010–2022 comparison for the repository homepage."""
+    configure_style()
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    wide = data.pivot(index="city", columns="year", values="coupling_coordination_reported")
+    wide = wide.assign(change=wide[2022] - wide[2010]).sort_values(2022, ascending=False)
+    mean_2010 = data.loc[data["year"].eq(2010), "coupling_coordination_reported"].mean()
+    mean_2022 = data.loc[data["year"].eq(2022), "coupling_coordination_reported"].mean()
+    improved = int(wide["change"].gt(0).sum())
+    declined = wide.index[wide["change"].lt(0)].tolist()
+
+    navy = "#19324D"
+    teal = "#16847B"
+    coral = "#D26745"
+    slate = "#8C98A4"
+    pale = "#E8EDF1"
+    purple = "#7562A8"
+
+    fig = plt.figure(figsize=(14.2, 7.7), facecolor="white")
+    grid = fig.add_gridspec(
+        1,
+        2,
+        width_ratios=[3.25, 1.15],
+        left=0.08,
+        right=0.96,
+        bottom=0.12,
+        top=0.78,
+        wspace=0.13,
+    )
+
+    ax = fig.add_subplot(grid[0, 0])
+    positions = np.arange(len(wide))
+    for y, (_, row) in zip(positions, wide.iterrows()):
+        color = teal if row["change"] > 0 else coral
+        ax.plot([row[2010], row[2022]], [y, y], color=color, linewidth=3.2, alpha=0.72, solid_capstyle="round")
+        ax.scatter(row[2010], y, s=62, facecolor="white", edgecolor=slate, linewidth=1.8, zorder=3)
+        ax.scatter(row[2022], y, s=72, facecolor=color, edgecolor="white", linewidth=0.9, zorder=4)
+        label_x = max(row[2010], row[2022]) + 0.009
+        ax.text(label_x, y, f"{row['change']:+.02f}", va="center", color=color, fontsize=8.2, fontweight="bold")
+
+    ax.set_yticks(positions, labels=wide.index)
+    ax.invert_yaxis()
+    ax.set_xlim(0.43, 0.77)
+    ax.set_xticks(np.arange(0.45, 0.76, 0.05))
+    ax.set_xlabel("Reported coupling-coordination index", color="#4F5B66", labelpad=10)
+    ax.grid(axis="x", color=pale, linewidth=1)
+    ax.tick_params(axis="y", length=0, pad=8, labelcolor=navy)
+    ax.tick_params(axis="x", colors="#65727E")
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    legend = [
+        Line2D([0], [0], marker="o", color="none", markerfacecolor="white", markeredgecolor=slate, markeredgewidth=1.7, markersize=7, label="2010"),
+        Line2D([0], [0], marker="o", color="none", markerfacecolor=teal, markeredgecolor="white", markersize=8, label="2022 · improved"),
+        Line2D([0], [0], marker="o", color="none", markerfacecolor=coral, markeredgecolor="white", markersize=8, label="2022 · declined"),
+    ]
+    ax.legend(handles=legend, loc="lower left", bbox_to_anchor=(0, 1.025), ncol=3, handletextpad=0.5, columnspacing=1.4)
+
+    info = fig.add_subplot(grid[0, 1])
+    info.set_xlim(0, 1)
+    info.set_ylim(0, 1)
+    info.axis("off")
+    info.axvline(0.02, color=pale, linewidth=1.2)
+    info.text(0.12, 0.97, "AT A GLANCE", color="#6B7782", fontsize=9, fontweight="bold", va="top")
+    info.text(0.12, 0.82, f"{improved} / 17", color=teal, fontsize=31, fontweight="bold", va="center")
+    info.text(0.12, 0.74, "cities improved", color=navy, fontsize=11, fontweight="bold")
+
+    info.text(0.12, 0.57, f"{mean_2010:.3f}", color=slate, fontsize=18, fontweight="bold")
+    info.text(0.49, 0.57, "→", color="#87929C", fontsize=18, ha="center", fontweight="bold")
+    info.text(0.86, 0.57, f"{mean_2022:.3f}", color=teal, fontsize=18, ha="right", fontweight="bold")
+    info.text(0.12, 0.50, "provincial mean", color="#6B7782", fontsize=9)
+
+    info.text(0.12, 0.35, "2  →  8", color=purple, fontsize=23, fontweight="bold")
+    info.text(0.12, 0.27, "cities in moderate coordination", color=navy, fontsize=9.5, fontweight="bold")
+
+    info.text(0.12, 0.12, "3 declined", color=coral, fontsize=12, fontweight="bold")
+    info.text(0.12, 0.065, " · ".join(declined), color="#6B7782", fontsize=8.5)
+
+    fig.text(0.08, 0.925, "Coordination improved — but not everywhere", color=navy, fontsize=25, fontweight="bold")
+    fig.text(0.08, 0.867, "A direct city-by-city comparison of reported results in Henan, 2010–2022", color="#5F6B75", fontsize=12)
+    fig.text(
+        0.08,
+        0.035,
+        "Each line links the same city across time; labels show the absolute change. Descriptive comparison of reported values.",
+        color="#6B7782",
+        fontsize=8.5,
+    )
+
+    png_path = output_dir / "readme_hero.png"
+    svg_path = output_dir / "readme_hero.svg"
+    fig.savefig(png_path, dpi=220, facecolor="white", bbox_inches="tight", metadata={"Software": "matplotlib"})
+    fig.savefig(svg_path, facecolor="white", bbox_inches="tight", metadata={"Date": None})
+    plt.close(fig)
+    return png_path, svg_path
 
 
 def make_portfolio_figure(data: pd.DataFrame, output_dir: str | Path) -> tuple[Path, Path]:
@@ -127,7 +228,7 @@ def make_portfolio_figure(data: pd.DataFrame, output_dir: str | Path) -> tuple[P
 
     png_path = output_dir / "portfolio_overview.png"
     svg_path = output_dir / "portfolio_overview.svg"
-    fig.savefig(png_path, dpi=220, bbox_inches="tight", facecolor="white")
-    fig.savefig(svg_path, bbox_inches="tight", facecolor="white")
+    fig.savefig(png_path, dpi=220, bbox_inches="tight", facecolor="white", metadata={"Software": "matplotlib"})
+    fig.savefig(svg_path, bbox_inches="tight", facecolor="white", metadata={"Date": None})
     plt.close(fig)
     return png_path, svg_path
